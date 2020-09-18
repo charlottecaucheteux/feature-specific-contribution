@@ -232,8 +232,8 @@ def contrib_concat(
         X_below = X[:, below].copy()
 
         # Apply PCA if needed
-        if pca > 0 and pca < len(below):
-            X_below = StandardScaler().fit_transform(X_below)
+        if pca > 0 and pca < X_below.shape[1]:
+            # X_below = StandardScaler().fit_transform(X_below)
             X_below = PCA(pca).fit_transform(X_below)
 
         for split, (train, test) in enumerate(cv.split(y, groups=groups)):

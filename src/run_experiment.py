@@ -5,12 +5,9 @@ from sklearn.linear_model import RidgeCV
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from .get_contrib import (
-    contrib_concat,
-    contrib_permute_above_train,
-    contrib_permute_below,
-    contrib_permute_current,
-)
+from .get_contrib import (contrib_concat, contrib_permute_above_train,
+                          contrib_permute_below, contrib_permute_current)
+from .utils import r_metric
 
 
 def get_column_transformers(hierarchy, scale=True, pca=20):
@@ -42,6 +39,7 @@ def run_experiment(
     scale=True,
     n_repeats=50,
     pca=20,
+    metric=r_metric,
 ):
     """Compute the contribution of each feature group, given in hierarchy,
     to predict (given X and model) each dimension of the target y.
@@ -122,7 +120,13 @@ def run_experiment(
         importance[i, j] gives the contribution of features
         group i for th prediction of y_j.
     """
-    assert exp in ["permute_current", "permute_below", "concat", "permute_above_train"]
+    assert exp in [
+        "permute_current",
+        "permute_below",
+        "concat",
+        "permute_above_train",
+        "concat_pca",
+    ]
 
     # Apply scaling and PCA
     if scale or pca:
@@ -134,18 +138,25 @@ def run_experiment(
 
     if exp == "permute_current":
         importance = contrib_permute_current(
-            X, y, hierarchy=hierarchy, model=model, n_repeats=n_repeats
+            X, y, hierarchy=hierarchy, model=model, n_repeats=n_repeats, metric=metric
         )
     if exp == "permute_below":
         importance = contrib_permute_below(
-            X, y, hierarchy=hierarchy, model=model, n_repeats=n_repeats
+            X, y, hierarchy=hierarchy, model=model, n_repeats=n_repeats, metric=metric
         )
     if exp == "concat":
-        importance = contrib_concat(X, y, hierarchy=hierarchy, model=model)
+        importance = contrib_concat(
+            X, y, hierarchy=hierarchy, model=model, metric=metric
+        )
+
+    if exp == "concat_pca":
+        importance = contrib_concat(
+            X, y, hierarchy=hierarchy, model=model, metric=metric, pca=50,
+        )
 
     if exp == "permute_above_train":
         importance = contrib_permute_above_train(
-            X, y, hierarchy=hierarchy, model=model, n_repeats=n_repeats
+            X, y, hierarchy=hierarchy, model=model, n_repeats=n_repeats, metric=metric,
         )
 
     return importance

@@ -1,7 +1,9 @@
 import numpy as np
+from sklearn.decomposition import PCA
 from sklearn.linear_model import RidgeCV
 from sklearn.model_selection import KFold
 from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 from .orthogonalizer import HierarchOrthogonalizer
 from .utils import r_metric, shuffle_c
@@ -16,8 +18,7 @@ def _get_permutation_mask(hierarchy, mode="permute_current"):
      of shape (n_groups, x_dim)
     """
     assert mode in ["permute_current", "permute_below"]
-    permutation_mask = np.zeros((len(np.unique(hierarchy)), len(hierarchy)),
-    dtype=bool)
+    permutation_mask = np.zeros((len(np.unique(hierarchy)), len(hierarchy)), dtype=bool)
     for i, level in enumerate(np.unique(hierarchy)):
         if mode == "permute_current":
             permutation_mask[i] = hierarchy == level
@@ -27,7 +28,8 @@ def _get_permutation_mask(hierarchy, mode="permute_current"):
 
 
 def _get_permutation_score(
-    estimator, X, y, permutation_mask, metric=r_metric, n_repeats=10):
+    estimator, X, y, permutation_mask, metric=r_metric, n_repeats=10
+):
     """
     Compute permutation score, given permutation_mask.
     Ex: if permutation mask = 
@@ -203,6 +205,7 @@ def contrib_concat(
     metric=r_metric,
     groups=None,
     model=RidgeCV(np.logspace(-2, 8, 20)),
+    pca=0,
 ):
     """
     Method C
@@ -222,26 +225,33 @@ def contrib_concat(
     # Cross validation loop
     n_levels = len(np.unique(hierarchy))
     score = np.zeros((cv.n_splits, n_levels, *y.shape[1:]))
-    for split, (train, test) in enumerate(cv.split(y, groups=groups)):
+    for i, level in enumerate(np.unique(hierarchy)):
 
-        for i, level in enumerate(np.unique(hierarchy)):
-            # Select
-            below = np.where(hierarchy <= level)[0]
+        # Select
+        below = np.where(hierarchy <= level)[0]
+        X_below = X[:, below].copy()
+
+        # Apply PCA if needed
+        if pca > 0 and pca < len(below):
+            X_below = StandardScaler().fit_transform(X_below)
+            X_below = PCA(pca).fit_transform(X_below)
+
+        for split, (train, test) in enumerate(cv.split(y, groups=groups)):
 
             # Fit
-            model.fit(X[train][:, below], y[train])
+            model.fit(X_below[train], y[train])
 
             # Predict
-            pred = model.predict(X[test][:, below])
+            pred = model.predict(X_below[test])
 
             # Score
             score[split, i] = metric(pred, y[test])
 
-        # Orthogonalize contributions
-        score[split, 1:] -= score[split, :-1]
-
     # Average accross splits
     score = score.mean(0)
+
+    # Orthogonalize contributions
+    score[1:] -= score[:-1]
 
     return score
 

@@ -27,33 +27,32 @@ def _get_permutation_mask(hierarchy, mode="permute_current"):
 
 
 def _get_permutation_score(
-    estimator, X, y, permutation_mask, metric=r_metric, n_repeats=10
-):
-"""
-Compute permutation score, given permutation_mask.
-Ex: if permutation mask = 
-   [[True, True, True, False, False, False],
-     [False, False, False, True, True, False],
-     [False, False, False, False, False, True,]]
-    of shape (n_groups, x_dim)
-Compute the permutation importance, successively for:
-    - cols 0-2
-    - cold 3-5
-    - cols 6
-To compute the permutation importance:
-    First compute the score for X.
-    Then, for each group i:
-        - permute the columns permutation_mask[i] n_repeats time
-        - compute the score for permuted X each time
-        - average scores over repeats
-        - take the difference between baseline score and
-        scores with permutation (averaged on repeats)  
-Returns
-    array of shape (n_groups, y_dim)
-        with n_groups = len(unique(hierarchy))
-        importance[i, j] gives the contribution of features
-        group i for th prediction of y_j.
-"""
+    estimator, X, y, permutation_mask, metric=r_metric, n_repeats=10):
+    """
+    Compute permutation score, given permutation_mask.
+    Ex: if permutation mask = 
+    [[True, True, True, False, False, False],
+        [False, False, False, True, True, False],
+        [False, False, False, False, False, True,]]
+        of shape (n_groups, x_dim)
+    Compute the permutation importance, successively for:
+        - cols 0-2
+        - cold 3-5
+        - cols 6
+    To compute the permutation importance:
+        First compute the score for X.
+        Then, for each group i:
+            - permute the columns permutation_mask[i] n_repeats time
+            - compute the score for permuted X each time
+            - average scores over repeats
+            - take the difference between baseline score and
+            scores with permutation (averaged on repeats)  
+    Returns
+        array of shape (n_groups, y_dim)
+            with n_groups = len(unique(hierarchy))
+            importance[i, j] gives the contribution of features
+            group i for th prediction of y_j.
+    """
 
     # Scores without permutation
     pred = estimator.predict(X)
